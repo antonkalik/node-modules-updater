@@ -21,29 +21,22 @@ function Logger() {
 function Spinner(speed = 100) {
   let index = 0;
 
-  readline.cursorTo(process.stdout, 0);
   const spinners = ['-', '\\', '|', '/'];
 
-  function spin(isStop) {
-    if (!isStop) {
-      setTimeout(() => {
-        readline.cursorTo(process.stdout, 0);
-        std.write(spinners[index]);
-        index++;
-        if (index + 1 === spinners.length) {
-          index = 0;
-        }
-        spin();
-      }, speed);
-    }
+  function spin() {
+    readline.cursorTo(process.stdout, 0);
+    setTimeout(() => {
+      std.write(spinners[index]);
+      index++;
+      if (index + 1 === spinners.length) {
+        index = 0;
+      }
+      spin();
+    }, speed);
   }
   return {
-    start: () => spin(false),
-    stop: () => {
-      process.on('exit', code => {
-        console.log(`Finished with: ${code}`);
-      });
-    },
+    start: spin,
+    stop: () => process.exit(),
   };
 }
 
@@ -53,7 +46,7 @@ const log = Logger();
 async function updatePackages({ dependencies, devDependencies }) {
   let allDependencies;
 
-  log.success('get dependencies...');
+  log.success('getting dependencies...');
 
   try {
     allDependencies = {
@@ -90,17 +83,19 @@ async function updatePackages({ dependencies, devDependencies }) {
     spinner.start();
     log.success('removing node_modules...');
     await exec('rm -rf node_modules');
-    spinner.stop();
     log.success('node_modules removed!');
-    log.success('installing new packages...');
-    spinner.start();
+
+    log.success('now installing new packages.');
+    log.success('installing dependencies...');
     await exec('npm i -S ' + stringOfListDependencies);
-    spinner.stop();
-    log.success('dependencies has been installed!');
-    spinner.start();
+    log.success('dependencies has been installed.');
+
+    log.success('installing devDependencies...');
     await exec('npm i -D ' + stringOfListDevDependencies);
+    log.success('devDependencies has been installed.');
+
+    log.success(`All dependencies has been installed and ${fileName} has been updated.`);
     spinner.stop();
-    log.success(`Dependencies has been installed and ${fileName} has been updated!`);
   } catch (e) {
     throw 'Installing packages error.';
   }
