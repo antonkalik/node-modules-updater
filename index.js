@@ -13,23 +13,28 @@ function Logger() {
   let green = '\x1b[32m';
   let red = '\x1b[31m';
   let white = '\x1b[37m';
-  // return {
-  //   success: message => console.log(green, bold, '✔ ' + message + '.'),
-  //   process: message => console.log(white, bold, message + '...'),
-  //   error: message => console.log(red, bold, message + '.'),
-  // };
   return {
     success: message => {
       std.clearLine(0);
-      std.cursorTo(3);
-      std.write( '✔ ' + message + '.' + '\n');
+      std.cursorTo(1);
+      std.write(bold);
+      std.write(green);
+      std.write('✔ ' + message + '.' + '\n');
     },
     process: message => {
       std.clearLine(0);
       std.cursorTo(3);
+      std.write(bold);
+      std.write(white);
       std.write(message + '...');
     },
-    error: message => console.log(red, bold, message + '.'),
+    error: message => {
+      std.clearLine(0);
+      std.cursorTo(1);
+      std.write(bold);
+      std.write(red);
+      std.write('✘ ' + message + '.' + '\n');
+    },
   };
 }
 
@@ -39,8 +44,9 @@ function Spinner(speed = 100) {
   const spinners = ['-', '\\', '|', '/'];
 
   function spin() {
-    readline.cursorTo(std, 1);
     setTimeout(() => {
+      readline.cursorTo(std, 1);
+      process.stderr.write('\x1B[?25l')
       std.write(spinners[index]);
       index++;
       if (index + 1 === spinners.length) {
