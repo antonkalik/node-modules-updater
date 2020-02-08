@@ -8,60 +8,78 @@ const exec = util.promisify(require('child_process').exec);
 const fileName = './package.json';
 const file = require(path.resolve(fileName));
 
-async function updatePackages({ dependencies, devDependencies }) {
-  const log = message => {
-    console.log('\x1b[32m', '\x1b[1m', message);
+function Logger() {
+  let bold = '\x1b[1m';
+  let green = '\x1b[32m';
+  let red = '\x1b[31m';
+  return {
+    success: message => console.log(green, bold, message),
+    error: message => console.log(red, bold, message),
   };
-  const spinner = speed => {
-    let index = 0;
-    let stop = false;
+}
 
-    readline.cursorTo(process.stdout, 0);
-    const spinners = ['-', '\\', '|', '/'];
+function Spinner(speed = 100) {
+  let index = 0;
 
-    function spin() {
-      if (!stop) {
-        setTimeout(() => {
-          readline.cursorTo(process.stdout, 0);
-          std.write(spinners[index]);
-          index++;
-          if (index + 1 === spinners.length) {
-            index = 0;
-          }
-          spin();
-        }, speed);
-      }
+  readline.cursorTo(process.stdout, 0);
+  const spinners = ['-', '\\', '|', '/'];
+
+  function spin(isStop) {
+    if (!isStop) {
+      setTimeout(() => {
+        readline.cursorTo(process.stdout, 0);
+        std.write(spinners[index]);
+        index++;
+        if (index + 1 === spinners.length) {
+          index = 0;
+        }
+        spin();
+      }, speed);
     }
-    return {
-      spin,
-      stop: () => {
-        stop = true;
-      },
-    };
+  }
+  return {
+    start: () => spin(false),
+    stop: () => {
+      process.on('exit', code => {
+        console.log(`Finished with: ${code}`);
+      });
+    },
   };
+}
 
-  log('get dependencies...');
-  const allDependencies = {
-    dependencies: Object.keys(dependencies),
-    devDependencies: Object.keys(devDependencies),
-  };
+const spinner = Spinner(100);
+const log = Logger();
+
+async function updatePackages({ dependencies, devDependencies }) {
+  let allDependencies;
+
+  log.success('get dependencies...');
+
+  try {
+    allDependencies = {
+      dependencies: Object.keys(dependencies),
+      devDependencies: Object.keys(devDependencies),
+    };
+  } catch {
+    throw 'Looks like something went wrong with your dependencies in ' + fileName;
+  }
+
   let data = JSON.stringify(allDependencies);
 
-  log('saving to buffer...');
+  log.success('saving to buffer...');
   let buffer = Buffer.from(data);
-
   let fileWithoutDependencies = file;
 
-  log(`removing old packages versions from ${fileName}...`);
+  log.success(`removing old packages versions from ${fileName}...`);
   delete fileWithoutDependencies.dependencies;
   delete fileWithoutDependencies.devDependencies;
 
   let fromBuffer = buffer.toString();
 
-  log('wighting rest data...');
+  log.success('wighting rest data...');
   fs.writeFile(fileName, JSON.stringify(fileWithoutDependencies), e => {
     if (e) {
-      console.error('WRITE FILE ERROR', e);
+      throw `Write ${fileName} error`;
     }
   });
 
@@ -69,21 +87,26 @@ async function updatePackages({ dependencies, devDependencies }) {
   const stringOfListDevDependencies = JSON.parse(fromBuffer).devDependencies.join(' ');
 
   try {
-    spinner.spin();
-    log('removing node_modules...');
+    spinner.start();
+    log.success('removing node_modules...');
     await exec('rm -rf node_modules');
-    log('node_modules removed!');
-    log('installing new packages...');
+    spinner.stop();
+    log.success('node_modules removed!');
+    log.success('installing new packages...');
+    spinner.start();
     await exec('npm i -S ' + stringOfListDependencies);
-    log('dependencies has been installed!');
+    spinner.stop();
+    log.success('dependencies has been installed!');
+    spinner.start();
     await exec('npm i -D ' + stringOfListDevDependencies);
-    log('devDependencies has been installed!');
-    log(`Dependencies has been installed and ${fileName} has been updated!`);
     spinner.stop();
+    log.success(`Dependencies has been installed and ${fileName} has been updated!`);
   } catch (e) {
-    spinner.stop();
-    console.error('EXEC ERROR', e);
+    throw 'Installing packages error.';
   }
 }
 
-updatePackages(file);
+updatePackages(file).catch(e => {
+  spinner.stop();
+  log.error(e);
+});
