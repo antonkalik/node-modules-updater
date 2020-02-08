@@ -22,7 +22,7 @@ async function updatePackages({ dependencies, devDependencies }) {
 
   fs.writeFile(fileName, JSON.stringify(fileWithoutDependencies), e => {
     if (e) {
-      console.log({ e });
+      console.error('WRITE FILE ERROR', e);
     }
   });
 
@@ -34,11 +34,11 @@ async function updatePackages({ dependencies, devDependencies }) {
   ).devDependencies.join(" ");
 
   try {
-    await exec("npm i --save " + stringOfListDependencies);
+    await exec("npm i -S " + stringOfListDependencies);
     await exec("npm i -D " + stringOfListDevDependencies);
-    console.log("package json updated");
+    console.log("Package json updated!");
   } catch (e) {
-    console.error("UPDATE ERROR", { e });
+    console.error("EXEC ERROR", e);
   }
 }
 
