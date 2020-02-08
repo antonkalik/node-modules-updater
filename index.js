@@ -40,13 +40,12 @@ function Logger() {
 
 function Spinner(speed = 100) {
   let index = 0;
-
-  const spinners = ['-', '\\', '|', '/'];
+  let spinners = ['-', '\\', '|', '/'];
 
   function spin() {
     setTimeout(() => {
       readline.cursorTo(std, 1);
-      process.stderr.write('\x1B[?25l')
+      process.stderr.write('\x1B[?25l');
       std.write(spinners[index]);
       index++;
       if (index + 1 === spinners.length) {
@@ -68,6 +67,7 @@ async function updatePackages({ dependencies, devDependencies }) {
   let allDependencies;
   spinner.start();
   log.process('Getting dependencies');
+  log.success('Prefetch dependencies');
 
   try {
     allDependencies = {
@@ -96,11 +96,9 @@ async function updatePackages({ dependencies, devDependencies }) {
 
   log.process(`Writing data to ${fileName}`);
   fs.writeFile(fileName, JSON.stringify(fileWithoutDependencies), e => {
-    if (e) {
-      throw `Write ${fileName} error`;
-    }
+    if (e) throw `Write ${fileName} error`;
+    log.success(`${fileName} has been updated`);
   });
-  log.success(`${fileName} has been updated`);
 
   const stringOfListDependencies = JSON.parse(fromBuffer).dependencies.join(' ');
   const stringOfListDevDependencies = JSON.parse(fromBuffer).devDependencies.join(' ');
