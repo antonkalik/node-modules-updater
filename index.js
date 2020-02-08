@@ -12,9 +12,23 @@ function Logger() {
   let bold = '\x1b[1m';
   let green = '\x1b[32m';
   let red = '\x1b[31m';
+  let white = '\x1b[37m';
+  // return {
+  //   success: message => console.log(green, bold, '✔ ' + message + '.'),
+  //   process: message => console.log(white, bold, message + '...'),
+  //   error: message => console.log(red, bold, message + '.'),
+  // };
   return {
-    success: message => console.log(green, bold, message),
-    error: message => console.log(red, bold, message),
+    success: message => {
+      std.clearLine(0);
+      console.log(green, bold, '✔ ' + message + '.');
+    },
+    process: message => {
+      std.clearLine(0);
+      std.cursorTo(3);
+      std.write(message + '...');
+    },
+    error: message => console.log(red, bold, message + '.'),
   };
 }
 
@@ -24,7 +38,7 @@ function Spinner(speed = 100) {
   const spinners = ['-', '\\', '|', '/'];
 
   function spin() {
-    readline.cursorTo(process.stdout, 0);
+    readline.cursorTo(std, 1);
     setTimeout(() => {
       std.write(spinners[index]);
       index++;
@@ -45,8 +59,8 @@ const log = Logger();
 
 async function updatePackages({ dependencies, devDependencies }) {
   let allDependencies;
-
-  log.success('getting dependencies...');
+  spinner.start();
+  log.process('Getting dependencies');
 
   try {
     allDependencies = {
@@ -58,50 +72,61 @@ async function updatePackages({ dependencies, devDependencies }) {
   }
 
   let data = JSON.stringify(allDependencies);
+  log.success('Dependencies has been fetched');
 
-  log.success('saving to buffer...');
+  log.process('Saving to buffer');
   let buffer = Buffer.from(data);
   let fileWithoutDependencies = file;
+  log.success('Dependencies has been saved to buffer');
 
-  log.success(`removing old packages versions from ${fileName}...`);
+  log.process(`Removing old packages versions from ${fileName}`);
   delete fileWithoutDependencies.dependencies;
   delete fileWithoutDependencies.devDependencies;
+  log.success('Old packages has been removed');
 
+  log.process('Getting data from buffer');
   let fromBuffer = buffer.toString();
 
-  log.success('wighting rest data...');
+  log.process(`Writing data to ${fileName}`);
   fs.writeFile(fileName, JSON.stringify(fileWithoutDependencies), e => {
     if (e) {
       throw `Write ${fileName} error`;
     }
   });
+  log.success(`${fileName} has been updated`);
 
   const stringOfListDependencies = JSON.parse(fromBuffer).dependencies.join(' ');
   const stringOfListDevDependencies = JSON.parse(fromBuffer).devDependencies.join(' ');
 
   try {
-    spinner.start();
-    log.success('removing node_modules...');
+    log.process('Removing node_modules');
     await exec('rm -rf node_modules');
-    log.success('node_modules removed!');
+    log.success('node_modules removed');
+  } catch {
+    throw "Can't remove node_modules";
+  }
 
-    log.success('now installing new packages.');
-    log.success('installing dependencies...');
+  try {
+    log.process('Installing new packages');
+    log.process('Installing dependencies');
     await exec('npm i -S ' + stringOfListDependencies);
-    log.success('dependencies has been installed.');
+    log.success('dependencies has been installed');
+  } catch {
+    throw "Can't installing dependencies";
+  }
 
-    log.success('installing devDependencies...');
+  try {
+    log.process('Installing devDependencies');
     await exec('npm i -D ' + stringOfListDevDependencies);
-    log.success('devDependencies has been installed.');
-
-    log.success(`All dependencies has been installed and ${fileName} has been updated.`);
+    log.success('devDependencies has been installed');
+    log.success(`All dependencies has been installed and ${fileName} has been updated`);
     spinner.stop();
   } catch (e) {
-    throw 'Installing packages error.';
+    throw "Can't installing devDependencies";
   }
 }
 
 updatePackages(file).catch(e => {
-  spinner.stop();
   log.error(e);
+  spinner.stop();
 });
