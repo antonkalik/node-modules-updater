@@ -21,7 +21,8 @@ function Logger() {
   return {
     success: message => {
       std.clearLine(0);
-      console.log(green, bold, '✔ ' + message + '.');
+      std.cursorTo(3);
+      std.write( '✔ ' + message + '.' + '\n');
     },
     process: message => {
       std.clearLine(0);
