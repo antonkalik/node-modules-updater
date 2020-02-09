@@ -144,6 +144,7 @@ function updatePackages(file) {
     try {
       log.process('Installing devDependencies');
       await exec('npm i -D ' + stringOfListDevDependencies);
+      await exec('echo -en "\\e[?25h"');
       log.success('devDependencies has been installed');
       log.success(`All dependencies has been installed and ${fileName} has been updated`);
       spinner.stop();
