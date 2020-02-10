@@ -65,10 +65,10 @@ const log = Logger();
 function updatePackages(file) {
   const rl = readline.createInterface({
     input: stdin,
-    output: stdout,
+    output: stdout
   });
 
-  rl.question('Ready? Press [y] if yes or [n] if no: ', res => {
+  rl.question("Ready? Press [y] if yes or [n] if no: ", res => {
     if (res === 'y') {
       onUpdate(file).catch(e => {
         log.error(e);
@@ -79,8 +79,8 @@ function updatePackages(file) {
     }
   });
 
-  rl.on('close', () => {
-    console.log('\nSee ya');
+  rl.on("close", () => {
+    console.log("\nSee ya");
     process.exit(0);
   });
 
